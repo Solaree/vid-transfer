@@ -1,0 +1,31 @@
+{
+  "name": "vid-transfer-relay",
+  "version": "0.1.0",
+  "description": "End-to-end encrypted relay for vid-transfer (Solana validator identity migration). Stores ciphertext only; never sees keys in the clear.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "lint": "tsc --noEmit",
+    "test": "node --test --test-reporter spec dist/test/*.test.js",
+    "test:build": "tsc -p tsconfig.json && npm test"
+  },
+  "dependencies": {
+    "fastify": "^5.8.5",
+    "@fastify/rate-limit": "^10.3.0",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/cors": "^11.1.0",
+    "@fastify/static": "^9.1.3",
+    "pino": "^9.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.3"
+  }
+}

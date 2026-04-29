@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>vid-transfer — secure Solana validator identity migration</title>
+<meta name="description" content="End-to-end encrypted, single-shot transfer of a Solana validator-keypair.json (and its tower file) between hosts. The relay never sees the key.">
+<meta property="og:title" content="vid-transfer — Solana validator identity migration">
+<meta property="og:description" content="End-to-end encrypted CLI for moving a validator's identity between hosts. Sealed-box X25519, mlock'd memory, tower-file aware, slashing-safe.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://vid-transfer-relay.fly.dev/">
+<link rel="canonical" href="https://vid-transfer-relay.fly.dev/">
+<style>
+  :root {
+    --bg:        #0a0c10;
+    --bg2:       #11141b;
+    --panel:     #131720;
+    --line:      #1d212c;
+    --text:      #e3e6ec;
+    --dim:       #8b95a4;
+    --accent:    #4cc38a;
+    --accent-d:  #2f8f60;
+    --warn:      #f6b049;
+    --danger:    #e25c5c;
+    --term-bg:   #0c0f15;
+    --mono: ui-monospace, "JetBrains Mono", "Fira Code", SFMono-Regular,
+            Menlo, Consolas, monospace;
+    --sans: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI",
+            Inter, Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .nav {
+    position: sticky; top: 0; z-index: 5;
+    background: rgba(10,12,16,0.85);
+    backdrop-filter: saturate(140%) blur(8px);
+    border-bottom: 1px solid var(--line);
+    padding: 12px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .nav b { font-family: var(--mono); letter-spacing: 0.02em; }
+  .nav .pill {
+    font-family: var(--mono); font-size: 11px;
+    padding: 2px 8px; border: 1px solid var(--accent-d);
+    border-radius: 999px; color: var(--accent);
+  }
+
+  main { max-width: 880px; margin: 0 auto; padding: 64px 24px 96px; }
+  section { margin: 56px 0; }
+
+  /* --- HERO ----------------------------------------------------------- */
+  .hero h1 {
+    font-size: 44px; line-height: 1.05; margin: 0 0 14px;
+    letter-spacing: -0.02em; font-weight: 700;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(120deg, #4cc38a 0%, #6cb6ff 60%, #b48cff 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p.lead {
+    font-size: 18px; color: var(--dim); max-width: 640px; margin: 0 0 24px;
+  }
+  .hero .ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 10px 18px; border-radius: 8px;
+    font-family: var(--sans); font-weight: 600; font-size: 14px;
+    border: 1px solid var(--line);
+  }
+  .btn.primary {
+    background: var(--accent); color: #0a0c10; border-color: var(--accent);
+  }
+  .btn.primary:hover { background: #5dd49a; text-decoration: none; }
+  .btn.ghost { background: transparent; color: var(--text); }
+  .btn.ghost:hover { background: var(--panel); text-decoration: none; }
+  .badges { margin-top: 24px; display: flex; gap: 16px; flex-wrap: wrap;
+            color: var(--dim); font-size: 13px; }
+  .badges span::before { content: "•"; color: var(--accent); margin-right: 8px; }
+
+  /* --- TERMINAL DEMO -------------------------------------------------- */
+  .terms { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; margin-top: 12px; }
+  @media (max-width: 720px) { .terms { grid-template-columns: 1fr; } }
+  .term {
+    background: var(--term-bg); border: 1px solid var(--line);
+    border-radius: 10px; overflow: hidden;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+  }
+  .term .title {
+    background: #161a23; border-bottom: 1px solid var(--line);
+    padding: 8px 14px; display: flex; align-items: center; gap: 10px;
+    font-family: var(--mono); font-size: 12px; color: var(--dim);
+  }
+  .term .dots { display: inline-flex; gap: 6px; margin-right: 6px; }
+  .term .dots i {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    background: #353a45;
+  }
+  .term .dots i.r { background: #e25c5c; }
+  .term .dots i.y { background: #f6b049; }
+  .term .dots i.g { background: #4cc38a; }
+  .term pre {
+    margin: 0; padding: 16px 18px; font-family: var(--mono); font-size: 13px;
+    color: var(--text); white-space: pre-wrap; line-height: 1.6;
+  }
+  .term .prompt { color: var(--accent); }
+  .term .ok     { color: var(--accent); }
+  .term .warn   { color: var(--warn);   }
+  .term .step   { color: #6cb6ff;       }
+  .term .dim    { color: var(--dim);    }
+  .term .code   { color: #b48cff; font-weight: 700; }
+
+  /* --- FEATURE GRID --------------------------------------------------- */
+  .grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 18px 20px;
+  }
+  .card h3 {
+    margin: 0 0 6px; font-size: 15px; letter-spacing: 0.01em;
+  }
+  .card h3 .dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); margin-right: 8px; vertical-align: middle;
+  }
+  .card p { margin: 0; color: var(--dim); font-size: 14px; }
+
+  /* --- SECURITY BLOCK ------------------------------------------------- */
+  .sec {
+    background: linear-gradient(180deg, #131720 0%, #0c0f16 100%);
+    border: 1px solid var(--line); border-radius: 12px;
+    padding: 24px 28px;
+  }
+  .sec h2 { margin: 0 0 12px; font-size: 22px; }
+  .sec ul { padding-left: 20px; margin: 0; }
+  .sec li { margin: 6px 0; color: var(--dim); font-size: 14px; }
+  .sec li b { color: var(--text); }
+
+  /* --- ENDPOINTS ------------------------------------------------------ */
+  .ep {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 12px 14px; font-family: var(--mono);
+    font-size: 13px;
+  }
+  .ep .verb { display: inline-block; width: 50px; color: var(--accent);
+              font-weight: 700; }
+  .ep span.path { color: var(--text); }
+  .ep p { margin: 4px 0 0 60px; color: var(--dim); font-family: var(--sans);
+          font-size: 13px; line-height: 1.45; }
+
+  /* --- FOOTER --------------------------------------------------------- */
+  footer {
+    border-top: 1px solid var(--line); padding: 24px;
+    color: var(--dim); font-size: 13px; text-align: center;
+  }
+  footer .mono { font-family: var(--mono); }
+
+  h2 { font-size: 24px; margin: 0 0 16px; letter-spacing: -0.01em; }
+  h2 .anchor { color: var(--dim); font-weight: 500; font-size: 14px;
+               margin-left: 10px; }
+  .stack { display: flex; flex-direction: column; gap: 10px; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 0; }
+
+  /* live status indicator on healthz */
+  .live {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--accent); font-family: var(--mono); font-size: 12px;
+  }
+  .live i {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(76,195,138,0.6);
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0   rgba(76,195,138,0.6); }
+    70%  { box-shadow: 0 0 0 10px rgba(76,195,138,0);   }
+    100% { box-shadow: 0 0 0 0   rgba(76,195,138,0);   }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <b>vid-transfer</b>
+  <span id="status" class="live"><i></i> checking…</span>
+</nav>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero">
+    <h1>Move a Solana validator identity<br><span class="grad">between hosts, securely.</span></h1>
+    <p class="lead">
+      End-to-end encrypted, single-shot transfer of <code>validator-keypair.json</code>
+      (and the matching tower file) over an untrusted relay.
+      The private key never leaves the operator's machines in the clear.
+    </p>
+    <div class="ctas">
+      <a class="btn primary" href="https://github.com/Solaree/vid-transfer">Get the CLI →</a>
+      <a class="btn ghost" href="#how-it-works">How it works</a>
+      <a class="btn ghost" href="#endpoints">API</a>
+    </div>
+    <div class="badges">
+      <span>libsodium sealed box</span>
+      <span>mlock'd memory</span>
+      <span>tower-file aware</span>
+      <span>slashing-safe pre-flight</span>
+    </div>
+  </section>
+
+  <!-- TERMINAL DEMO -->
+  <section id="demo">
+    <h2>What it looks like</h2>
+    <div class="terms">
+
+      <div class="term">
+        <div class="title">
+          <span class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+          new-host — vid-transfer receive
+        </div>
+<pre><span class="prompt">$</span> vid-transfer receive --out new.json \
+    --ledger /mnt/ledger \
+    --expected-pubkey 7Np4...JxZ
+<span class="step">[step]</span> generating ephemeral X25519 keypair
+<span class="step">[step]</span> registering session with relay
+
+┌───────────────────────────────────────────┐
+│  Share this 6-word code with the sender:  │
+│                                           │
+│   <span class="code">spider-decline-mango-rib-couple-trial</span>   │
+│                                           │
+└───────────────────────────────────────────┘
+  <span class="dim">expires in 5m 0s — receiver and sender</span>
+  <span class="dim">must compare words; abort on mismatch.</span>
+
+<span class="step">[step]</span> waiting for sender (timeout 600 s)</pre>
+      </div>
+
+      <div class="term">
+        <div class="title">
+          <span class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+          old-host — vid-transfer send
+        </div>
+<pre><span class="prompt">$</span> vid-transfer send <span class="code">spider-decline-mango-rib-couple-trial</span> \
+    --keypair /etc/solana/validator-keypair.json \
+    --ledger /mnt/ledger
+<span class="ok">[ ok ]</span> pairing code decoded
+<span class="ok">[ ok ]</span> local validator identity: 7Np4...JxZ
+<span class="step">[step]</span> pre-flight: querying leader schedule
+<span class="ok">[ ok ]</span> leader schedule check passed
+<span class="step">[step]</span> fetching recipient pubkey from relay
+<span class="ok">[ ok ]</span> relay pubkey verified against pairing code
+<span class="ok">[ ok ]</span> bundle prepared: 4123 bytes plaintext
+<span class="step">[step]</span> sealing to recipient
+<span class="ok">[ ok ]</span> ciphertext: 4171 bytes
+<span class="step">[step]</span> uploading to relay
+<span class="ok">[ ok ]</span> upload complete.</pre>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="how-it-works">
+    <h2>Designed around three properties</h2>
+    <div class="grid">
+      <div class="card">
+        <h3><span class="dot"></span>Untrusted relay</h3>
+        <p>The relay only ever holds opaque ciphertext. The pairing code's
+           hash prefix lets the sender locally verify the recipient's
+           pubkey — a hostile relay cannot substitute keys.</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>Slashing-safe</h3>
+        <p>Pre-flight reads the leader schedule and refuses to transfer
+           inside an imminent leader window. Tower file moves with the
+           keypair so the new host can <code>set-identity --require-tower</code>.</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>Memory hygiene</h3>
+        <p>Keys live in <code>sodium_malloc</code> buffers — mlock'd, guard-paged,
+           zeroized on every exit path including SIGINT. No copies on
+           disk except the operator's two files.</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>Single-shot</h3>
+        <p>Every session is one-time-use. Ciphertext is wiped from memory
+           on first delivery, sessions TTL out in 5 minutes, the relay
+           keeps no persistent state.</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>One static binary</h3>
+        <p>C + libsodium + libcurl. Builds with <code>make</code> on Linux and
+           macOS. No runtime, no installer, fits on a USB stick.</p>
+      </div>
+      <div class="card">
+        <h3><span class="dot"></span>Self-hostable</h3>
+        <p>The relay is a 200-line Fastify service. <code>fly deploy</code>,
+           <code>railway up</code>, or <code>docker run</code> — pick one. No database,
+           no shared backend.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECURITY -->
+  <section>
+    <div class="sec">
+      <h2>The protocol in five lines</h2>
+      <ul>
+        <li><b>Receiver</b> generates an ephemeral X25519 keypair and
+            registers with the relay under a prefix = <code>blake2b-512(pk)[0..8]</code>.</li>
+        <li>The 8-byte prefix is rendered as 6 BIP39 words and shown to the operator.</li>
+        <li><b>Sender</b> types the words. The CLI fetches the recipient pubkey from
+            the relay, re-derives the prefix, and <b>refuses to upload</b> on mismatch.</li>
+        <li><b>Sender</b> seals (X25519 + XSalsa20-Poly1305) the validator keypair,
+            tower file, and metadata to the recipient pubkey, and uploads.</li>
+        <li><b>Receiver</b> long-polls, decrypts, verifies the embedded pubkey
+            matches, writes <code>0600</code> files, optionally <code>--require-tower</code>'s the swap.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ENDPOINTS -->
+  <section id="endpoints">
+    <h2>API <span class="anchor">— the relay surface</span></h2>
+    <div class="stack">
+      <div class="ep"><span class="verb">GET</span> <span class="path">/healthz</span>
+        <p>Liveness probe. Returns the count of live sessions (informational).</p>
+      </div>
+      <div class="ep"><span class="verb">GET</span> <span class="path">/v1/info</span>
+        <p>Runtime config: TTL, ciphertext cap, long-poll window. Used by <code>vid-transfer doctor</code>.</p>
+      </div>
+      <div class="ep"><span class="verb">POST</span> <span class="path">/v1/sessions</span>
+        <p>Register a recipient pubkey under <code>prefix = blake2b-512(pk)[0..8]</code>. The relay enforces the binding.</p>
+      </div>
+      <div class="ep"><span class="verb">GET</span> <span class="path">/v1/sessions/&lt;prefix&gt;</span>
+        <p>Look up a session. The CLI re-verifies <code>blake2b(pk)[0..8] == prefix</code> client-side.</p>
+      </div>
+      <div class="ep"><span class="verb">PUT</span> <span class="path">/v1/sessions/&lt;prefix&gt;/ciphertext</span>
+        <p>Upload sealed bundle. One-shot — second upload returns <code>409</code>.</p>
+      </div>
+      <div class="ep"><span class="verb">GET</span> <span class="path">/v1/sessions/&lt;prefix&gt;/ciphertext?wait=1</span>
+        <p>Long-poll for delivery. Drained on first read; subsequent reads return <code>404</code>.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span class="mono">vid-transfer 0.1.0</span> &nbsp;·&nbsp;
+  <a href="https://github.com/Solaree/vid-transfer">source</a> &nbsp;·&nbsp;
+  <a href="/v1/info">/v1/info</a> &nbsp;·&nbsp;
+  <a href="/healthz">/healthz</a>
+</footer>
+
+<script>
+  // Tiny live status indicator: turn green if /healthz returns ok.
+  const el = document.getElementById("status");
+  fetch("/healthz")
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(j => {
+      el.innerHTML = '<i></i> relay live · ' + (j.sessions ?? 0) + ' active session' + ((j.sessions ?? 0) === 1 ? '' : 's');
+    })
+    .catch(_ => {
+      el.style.color = '#e25c5c';
+      el.innerHTML = '<i style="background:#e25c5c"></i> relay unreachable';
+    });
+</script>
+
+</body>
+</html>
