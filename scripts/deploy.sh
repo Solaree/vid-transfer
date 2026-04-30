@@ -151,7 +151,7 @@ Examples:
   VIDX_PORT=9090 scripts/deploy.sh docker
 
 After deploy, point the CLI at the URL:
-  export VIDX_RELAY=https://your-relay.example
+  export VIDX_RELAY=https://your-deployed-relay.fly.dev
   vid-transfer doctor
 EOF
     ;;

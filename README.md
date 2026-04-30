@@ -45,8 +45,9 @@ hot-failover practice).
 
 ## Quickstart
 
-> Want it on your own server? Replace `https://your-relay.example` below
-> with whatever you point [docs/DEPLOY.md](docs/DEPLOY.md) at.
+> The CLI ships pointing at the public relay
+> <https://vid-transfer-relay.fly.dev>. Override with `--relay URL` or
+> `$VIDX_RELAY` if you self-host (see [docs/DEPLOY.md](docs/DEPLOY.md)).
 
 ```bash
 # 0. Build (Linux / macOS)
@@ -56,7 +57,6 @@ make           # builds CLI + relay
 
 # 1. NEW host: announce yourself, get a 6-word pairing code
 vid-transfer receive \
-  --relay https://your-relay.example \
   --out  /etc/solana/validator-keypair.json \
   --ledger /mnt/ledger \
   --expected-pubkey 7Np4...JxZ
@@ -66,7 +66,6 @@ vid-transfer receive \
 
 # 2. OLD host: type those 6 words
 vid-transfer send spider-decline-mango-rib-couple-trial \
-  --relay https://your-relay.example \
   --keypair /etc/solana/validator-keypair.json \
   --ledger /mnt/ledger
 
@@ -150,10 +149,9 @@ model, and crypto rationale.
 │   ├── railway.json
 │   └── README.md
 ├── docs/
+│   ├── PRODUCT.md   # start here for the elevator pitch
 │   ├── SECURITY.md  # threat model + crypto design
-│   ├── DEPLOY.md    # how to run a self-hosted relay
-│   ├── DEMO.md      # 90-second demo-video script
-│   └── PRODUCT.md   # start here for the elevator pitch
+│   └── DEPLOY.md    # how to run a self-hosted relay
 ├── scripts/
 │   ├── e2e.sh           # full transfer + tower + 0600 mode check
 │   ├── e2e-mismatch.sh  # negative tests for the security path

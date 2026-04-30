@@ -98,7 +98,13 @@ UndefinedBehaviorSanitizer.
 
 ## Tests
 
-A pure-CLI smoke test that exercises the full send/receive loop against
-a local relay lives at `../scripts/e2e.sh` (relay startup, keypair
-generation, pairing-code parse, bytes-equal verification). See
-[../docs/DEMO.md](../docs/DEMO.md) for the full demo flow.
+Two pure-shell smoke tests live in `../scripts/`:
+
+- `e2e.sh` — full positive flow: spin a local relay, generate a keypair,
+  run send + receive, assert bytes-equal delivery, tower-file equality,
+  and `0600` permissions on the output.
+- `e2e-mismatch.sh` — adversarial flow: an unknown pairing code is
+  refused without uploading; the relay rejects sessions whose prefix
+  does not match `blake2b(pubkey)[0..8]` (HTTP 400).
+
+Both finish in under 5 seconds and bail loudly on regression.

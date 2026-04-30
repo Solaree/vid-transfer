@@ -83,6 +83,6 @@ ok "installed: $DEST"
 
 "$DEST" --version
 echo
-info "next: configure the relay"
-info "  export VIDX_RELAY=https://your-relay.example"
+info "next: verify connectivity to the public relay"
 info "  vid-transfer doctor"
+info "  (or override with: export VIDX_RELAY=https://your-self-hosted-relay)"
