@@ -32,7 +32,7 @@ static void print_banner(const char *code, int64_t expires_at)
     fprintf(stderr,
         "\n"
         "%s┌─────────────────────────────────────────────────────────────┐%s\n"
-        "%s│%s  Share this 6-word code with the sender:                   %s│%s\n"
+        "%s│%s  Share this 6-word code with the sender:                    %s│%s\n"
         "%s│%s                                                             %s│%s\n",
         C_BOX, C_OFF,
         C_BOX, C_OFF, C_BOX, C_OFF,
