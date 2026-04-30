@@ -1,1 +1,19 @@
+# Build artifacts
+cli/build/
+**/*.o
+**/*.a
+**/*.dSYM/
+
+# Editor / OS noise
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+
+# Local state
 .claude
+*.log
+*.tmp
+.env
+.env.*

@@ -156,7 +156,8 @@ model, and crypto rationale.
 │   ├── e2e.sh           # full transfer + tower + 0600 mode check
 │   ├── e2e-mismatch.sh  # negative tests for the security path
 │   ├── deploy.sh        # one-command Fly.io / Railway deploy
-│   └── install.sh       # one-line installer for the CLI
+│   ├── install.sh       # source-install the CLI into $PREFIX/bin
+│   └── demo-reset.sh    # reset state between demo-video takes
 ├── Makefile   # top-level convenience targets
 └── README.md
 ```
