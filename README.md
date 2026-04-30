@@ -1,5 +1,7 @@
 # vid-transfer
 
+<img width="857" height="1041" src="https://github.com/user-attachments/assets/617a97d1-c4da-48cc-ad65-d35ef4ccc7ca" />
+
 > **Magic Wormhole for Solana validator identity.**
 > One CLI, one paste of 6 words, the key never touches a third party in
 > the clear, the tower file moves with it, no slashing.
